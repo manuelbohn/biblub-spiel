@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nature Adventure</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="game-shell">
+    <header>
+      <h1>Nature Adventure</h1>
+      <p>Use the arrow keys to move and avoid obstacles.</p>
+    </header>
+
+    <div class="hud">
+      <span id="score">Score: 0</span>
+      <div id="coinMeter" class="coin-meter" aria-label="Collected diamonds"></div>
+      <span id="status">Ready</span>
+    </div>
+
+    <canvas id="gameCanvas" width="900" height="500"></canvas>
+
+    <div class="controls">
+      <button id="restartButton">Restart Game</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

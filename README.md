@@ -7,7 +7,7 @@
 * im Ordner `index.html` durch Doppelklick öffnen um los zu legen
 
 ## Im Spiel ...
-* Taste `W` schießt Pfeile um die steine zu zerstören
+* Taste `W` schießt Pfeile um Steine zu zerstören
 * Taste `S` zerstört alle Steine im Sichtfeld, kostet aber Punkte
 
 ## Um zu bauen ...

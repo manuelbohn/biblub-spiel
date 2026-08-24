@@ -7,6 +7,8 @@
 * im Ordner `index.html` durch Doppelklick öffnen um los zu legen
 
 ## Im Spiel ...
+* Diamanten müssen gesammelt werden, Steine vermieden
+* Pfeiltasten `↑ ↓` bewegen den Biblub
 * Taste `W` schießt Pfeile um Steine zu zerstören
 * Taste `S` zerstört alle Steine im Sichtfeld, kostet aber Punkte
 

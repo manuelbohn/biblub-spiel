@@ -1054,6 +1054,11 @@ function updateEnemyShots(delta) {
     shot.x += shot.velocityX * delta / 16.67;
     shot.y += shot.velocityY * delta / 16.67;
     if (checkCollision(game.player, shot)) {
+      if (game.boss.active && game.shield.active) {
+        game.shield.active = false;
+        return;
+      }
+
       game.coinsCollected = Math.max(0, game.coinsCollected - 1);
       updateCoinMeter();
       if (game.coinsCollected === 0) {

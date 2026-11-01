@@ -15,9 +15,3 @@
 
 Besiege Biblub im letzten Level, indem du mit `W` auf ihn schießt. Weiche
 seinen Schüssen aus und sammle Diamanten.
-
-## Veröffentlichung
-
-Wähle beim ersten Einrichten in den Repository-Einstellungen unter **Pages**
-als Quelle **GitHub Actions**. Danach veröffentlichen Pushes auf `main` das
-Spiel automatisch über `.github/workflows/pages.yml`.

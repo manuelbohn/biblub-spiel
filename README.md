@@ -18,5 +18,6 @@ seinen Schüssen aus und sammle Diamanten.
 
 ## Veröffentlichung
 
-Pushes auf `main` veröffentlichen das Spiel automatisch mit GitHub Pages über
-`.github/workflows/pages.yml`.
+Wähle beim ersten Einrichten in den Repository-Einstellungen unter **Pages**
+als Quelle **GitHub Actions**. Danach veröffentlichen Pushes auf `main` das
+Spiel automatisch über `.github/workflows/pages.yml`.

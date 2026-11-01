@@ -14,15 +14,69 @@ body {
   padding: 20px;
 }
 
+.game-layout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: min(1200px, 100%);
+}
+
 .game-shell {
   width: 960px;
   max-width: 100%;
+  flex: 1 1 960px;
   display: grid;
   gap: 16px;
   padding: 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.85);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+.key-guide {
+  flex: 0 0 216px;
+  padding: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+}
+
+.key-guide h2 {
+  margin: 0 0 18px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.key-guide dl {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.key-guide-item dt {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.key-guide-item dd {
+  margin: 0;
+  color: #375a33;
+  font-size: 0.9rem;
+}
+
+kbd {
+  min-width: 30px;
+  padding: 4px 8px;
+  border: 1px solid #c5d8c1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 0 #c5d8c1;
+  color: #1f3d2f;
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
 }
 
 header {
@@ -78,10 +132,79 @@ header p {
 }
 
 #gameCanvas {
+  display: block;
   width: 100%;
   border-radius: 18px;
   background: #76c7f3;
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+.game-stage {
+  position: relative;
+  width: 100%;
+}
+
+.start-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(15, 15, 35, 0.72);
+}
+
+.start-screen[hidden] {
+  display: none;
+}
+
+.level-announcement {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: min(440px, calc(100% - 40px));
+  padding: 20px 24px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  background: rgba(15, 15, 35, 0.86);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+.level-announcement[hidden] {
+  display: none;
+}
+
+.start-card {
+  max-width: 440px;
+  padding: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+.start-card h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.start-card p {
+  margin: 12px 0 22px;
+  color: #375a33;
+}
+
+.start-card button {
+  min-width: 140px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .controls {
@@ -107,4 +230,29 @@ button:hover {
 
 button:active {
   transform: translateY(1px);
+}
+
+@media (max-width: 900px) {
+  .game-layout {
+    flex-direction: column;
+  }
+
+  .game-shell {
+    flex: none;
+    width: 100%;
+  }
+
+  .key-guide {
+    width: 100%;
+  }
+
+  .key-guide dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .key-guide dl {
+    grid-template-columns: 1fr;
+  }
 }

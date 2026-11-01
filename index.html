@@ -1,30 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nature Adventure</title>
+  <title>Biblub Spiel</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="game-shell">
-    <header>
-      <h1>Nature Adventure</h1>
-      <p>Use the arrow keys to move and avoid obstacles.</p>
-    </header>
+  <main class="game-layout">
+    <div class="game-shell">
+      <header>
+        <h1>Biblub Spiel</h1>
+      </header>
 
-    <div class="hud">
-      <span id="score">Score: 0</span>
-      <div id="coinMeter" class="coin-meter" aria-label="Collected diamonds"></div>
-      <span id="status">Ready</span>
+      <div class="hud">
+        <span id="score">Punktzahl: 0</span>
+        <span id="level">Level 1/6</span>
+        <div id="coinMeter" class="coin-meter" aria-label="Gesammelte Diamanten"></div>
+      </div>
+
+      <div class="game-stage">
+        <canvas id="gameCanvas" width="900" height="500"></canvas>
+        <div id="startScreen" class="start-screen">
+          <div class="start-card">
+            <h2>Bereit für die Höhle?</h2>
+            <p>Schließe zuerst alle fünf Höhlenlevel ab und stelle dich dann Biblub. Weiche seinen Schüssen aus und sammle Diamanten!</p>
+            <button id="startButton" type="button">Los geht's</button>
+          </div>
+        </div>
+        <div id="levelAnnouncement" class="level-announcement" role="status" aria-live="polite" hidden></div>
+      </div>
+
+      <div class="controls">
+        <button id="restartButton">Spiel neu starten</button>
+      </div>
     </div>
 
-    <canvas id="gameCanvas" width="900" height="500"></canvas>
-
-    <div class="controls">
-      <button id="restartButton">Restart Game</button>
-    </div>
-  </div>
+    <aside class="key-guide" aria-labelledby="key-guide-title">
+      <h2 id="key-guide-title">Steuerung</h2>
+      <dl>
+        <div class="key-guide-item">
+          <dt><kbd>↑</kbd> <kbd>↓</kbd></dt>
+          <dd>Nach oben und unten bewegen</dd>
+        </div>
+        <div class="key-guide-item">
+          <dt><kbd>←</kbd> <kbd>→</kbd></dt>
+          <dd>Durch die Welt bewegen</dd>
+        </div>
+        <div class="key-guide-item">
+          <dt><kbd>W</kbd></dt>
+          <dd>Laser abfeuern</dd>
+        </div>
+        <div class="key-guide-item">
+          <dt><kbd>S</kbd></dt>
+          <dd>Schild aktivieren (kostet 5 Diamanten)</dd>
+        </div>
+        <div class="key-guide-item">
+          <dt><kbd>D</kbd></dt>
+          <dd>Schockwelle auslösen (kostet 5 Diamanten)</dd>
+        </div>
+      </dl>
+    </aside>
+  </main>
 
   <script src="game.js"></script>
 </body>

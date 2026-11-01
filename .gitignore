@@ -1,1 +1,5 @@
 .DS_Store
+
+# Local artwork/source files not used by the game
+/biblub1.png
+/figure-edits.pptx

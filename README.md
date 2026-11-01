@@ -1,16 +1,22 @@
-# Das biblub Spiel
+# Biblub-Spiel
 
-## Um zu spielen ...
-* rechts oben auf den grünen Knopf "Code" klicken
-* ganz unten "Download ZIP" klicken
-* herunterladen, entpacken
-* im Ordner `index.html` durch Doppelklick öffnen um los zu legen
+[Jetzt spielen](https://manuelbohn.github.io/biblub-spiel/)
 
-## Im Spiel ...
-* Diamanten müssen gesammelt werden, Steine vermieden
-* Pfeiltasten `↑ ↓` bewegen den Biblub
-* Taste `W` schießt Pfeile um Steine zu zerstören
-* Taste `S` zerstört alle Steine im Sichtfeld, kostet aber Punkte
+## Lokal spielen
 
-## Um zu bauen ...
-* Vorschläge gerne als pull-request
+`index.html` im Browser öffnen.
+
+## Steuerung
+
+- Pfeiltasten: bewegen
+- `W`: Laser schießen
+- `S`: Schild aktivieren (kostet 5 Diamanten)
+- `D`: Schockwelle auslösen (kostet 5 Diamanten)
+
+Besiege Biblub im letzten Level, indem du mit `W` auf ihn schießt. Weiche
+seinen Schüssen aus und sammle Diamanten.
+
+## Veröffentlichung
+
+Pushes auf `main` veröffentlichen das Spiel automatisch mit GitHub Pages über
+`.github/workflows/pages.yml`.

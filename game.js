@@ -71,7 +71,8 @@ const game = {
   levelSpeedMultiplier: 1,
   obstacleCount: 3,
   level: 1,
-  maxLevel: 6,
+  bonusLevel: 6,
+  maxLevel: 7,
   levelDuration: 60000,
   levelElapsed: 0,
   tunnel: {
@@ -81,6 +82,7 @@ const game = {
     gapHeight: 340,
     centerY: 250,
     amplitude: 65,
+    winding: false,
     speed: 4,
     nextIn: 8000,
   },
@@ -89,12 +91,14 @@ const game = {
   knockedBack: false,
   coins: [],
   coinCount: 4,
+  coinCapacity: 20,
   coinsCollected: 0,
   score: 0,
   lasers: [],
   lastShot: 0,
   boss: {
     active: false,
+    isMiniBoss: false,
     x: canvas.width - 170,
     y: canvas.height / 2 - 60,
     width: 96,
@@ -104,7 +108,10 @@ const game = {
     health: 20,
     maxHealth: 20,
     shotTimer: 500,
+    shotInterval: 500,
   },
+  miniBossImage: new Image(),
+  miniBossImageLoaded: false,
   celebration: {
     active: false,
     elapsed: 0,
@@ -118,9 +125,15 @@ const game = {
     radius: 0,
     maxRadius: 360,
     speed: 18,
+    waveCount: 1,
+    pendingWaves: 0,
+    nextWaveTimer: 0,
+    stoneHit: false,
   },
   shield: {
     active: false,
+    hitsRemaining: 0,
+    maxHits: 7,
     width: 56,
     height: 49,
     image: new Image(),
@@ -184,7 +197,7 @@ function createCoin() {
 
 function initCoinMeter() {
   coinMeterElement.innerHTML = '';
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < game.coinCapacity; i += 1) {
     const slot = document.createElement('div');
     slot.className = 'coin-slot';
     coinMeterElement.appendChild(slot);
@@ -192,10 +205,22 @@ function initCoinMeter() {
 }
 
 function updateCoinMeter() {
+  while (coinMeterElement.children.length < game.coinCapacity) {
+    const slot = document.createElement('div');
+    slot.className = 'coin-slot';
+    coinMeterElement.appendChild(slot);
+  }
+  while (coinMeterElement.children.length > game.coinCapacity) {
+    coinMeterElement.removeChild(coinMeterElement.lastElementChild);
+  }
   const slots = coinMeterElement.children;
   for (let i = 0; i < slots.length; i += 1) {
     slots[i].classList.toggle('active', i < game.coinsCollected);
   }
+  coinMeterElement.setAttribute(
+    'aria-label',
+    `Gesammelte Diamanten: ${game.coinsCollected}/${game.coinCapacity}`
+  );
 }
 
 function startLevel(level, announce = false) {
@@ -203,30 +228,42 @@ function startLevel(level, announce = false) {
   levelAnnouncement.hidden = true;
   game.level = level;
   const isBossLevel = level === game.maxLevel;
-  const caveLevel = level;
+  const isBonusLevel = level === game.bonusLevel;
+  const caveLevel = Math.min(level, worldThemes.length);
   game.worldTheme = isBossLevel ? bossTheme : worldThemes[caveLevel - 1];
   game.levelElapsed = 0;
   game.levelSpeedMultiplier = caveLevel === 1 ? 0.5 : 1 + (caveLevel - 1) * 0.05;
   game.obstacleSpeed = 4 * game.levelSpeedMultiplier;
-  game.levelDuration = isBossLevel ? Infinity : 30000;
-  game.obstacleCount = isBossLevel ? 0 : 3 + caveLevel - 1;
+  game.levelDuration = isBossLevel ? Infinity : isBonusLevel ? 16000 : 30000;
+  game.obstacleCount = isBossLevel || isBonusLevel ? 0 : 3 + caveLevel - 1;
   game.obstacles = Array.from({ length: game.obstacleCount }, createObstacle);
   game.boss.active = isBossLevel;
-  game.boss.health = game.boss.maxHealth;
+  game.boss.isMiniBoss = false;
+  game.boss.health = isBossLevel ? 30 : level * 5;
+  game.boss.maxHealth = game.boss.health;
+  game.boss.width = 96;
+  game.boss.height = 96;
+  game.boss.x = game.width - 170;
   game.boss.y = game.height / 2 - game.boss.height / 2;
   game.boss.verticalDirection = 1;
-  game.boss.shotTimer = 500;
+  game.boss.shotInterval = isBossLevel ? 1000 / 12 : 1000 / (level * 2);
+  game.boss.shotTimer = game.boss.shotInterval;
   game.enemyShots = [];
   game.tunnel.active = false;
   game.tunnel.x = 0;
-  game.tunnel.width = 1500 + (caveLevel - 1) * 180;
-  game.tunnel.gapHeight = 340 - (caveLevel - 1) * 24;
-  game.tunnel.speed = game.obstacleSpeed;
-  game.tunnel.nextIn = 6000 + Math.random() * 3000;
+  game.tunnel.winding = isBonusLevel;
+  game.tunnel.width = isBonusLevel ? 1250 : 1500 + (caveLevel - 1) * 180;
+  game.tunnel.gapHeight = isBonusLevel ? 220 : 340 - (caveLevel - 1) * 24;
+  game.tunnel.amplitude = isBonusLevel ? 100 : 65;
+  game.tunnel.speed = isBonusLevel ? 5.2 : game.obstacleSpeed;
+  game.tunnel.nextIn = isBonusLevel
+    ? 1000 + Math.random() * 500
+    : 6000 + Math.random() * 3000;
   game.spikes = [];
   game.spikeTimer = 5000 + Math.random() * 3000;
-  if (isBossLevel) {
+  if (isBossLevel || isBonusLevel) {
     game.worldOffset = 0;
+    game.knockedBack = false;
     game.player.x = 120;
     game.player.y = game.height / 2 - game.player.height / 2;
   }
@@ -234,7 +271,9 @@ function startLevel(level, announce = false) {
   if (announce) {
     levelAnnouncement.textContent = isBossLevel
       ? `Level ${level}: Bosskampf gegen Biblub`
-      : `Welt ${caveLevel}: ${game.worldTheme.name}`;
+      : isBonusLevel
+        ? `Level ${level}: Diamanten und gewundene Tunnel`
+        : `Welt ${caveLevel}: ${game.worldTheme.name}`;
     levelAnnouncement.hidden = false;
     levelAnnouncementTimeout = window.setTimeout(() => {
       levelAnnouncement.hidden = true;
@@ -242,7 +281,43 @@ function startLevel(level, announce = false) {
   }
 }
 
+function startBossFight() {
+  game.boss.active = true;
+  game.boss.isMiniBoss = true;
+  game.boss.health = game.level * 5;
+  game.boss.maxHealth = game.boss.health;
+  if (game.level < game.bonusLevel) {
+    game.boss.height = 100;
+    game.boss.width = game.boss.height * (204 / 326);
+  } else {
+    game.boss.width = 96;
+    game.boss.height = 96;
+  }
+  game.boss.x = game.width - game.boss.width - 74;
+  game.boss.y = game.height / 2 - game.boss.height / 2;
+  game.boss.verticalDirection = 1;
+  const shotsPerSecond = game.level;
+  game.boss.shotInterval = 1000 / shotsPerSecond;
+  game.boss.shotTimer = game.boss.shotInterval;
+  game.obstacles = [];
+  game.obstacleCount = 0;
+  game.tunnel.active = false;
+  game.spikes = [];
+  game.worldOffset = 0;
+  game.player.x = 120;
+  game.player.y = game.height / 2 - game.player.height / 2;
+  game.enemyShots = [];
+  levelAnnouncement.textContent = game.level === game.maxLevel
+    ? `Level ${game.level}: Bosskampf gegen Biblub`
+    : `Level ${game.level}: Gegnerkampf`;
+  levelAnnouncement.hidden = false;
+  levelAnnouncementTimeout = window.setTimeout(() => {
+    levelAnnouncement.hidden = true;
+  }, 2400);
+}
+
 function resetGame() {
+  game.coinCapacity = 20;
   game.player.x = 120;
   game.player.y = game.height - game.player.height - 40;
   game.worldOffset = 0;
@@ -260,7 +335,10 @@ function resetGame() {
   game.laserShockwaves = [];
   game.shockwave.active = false;
   game.shockwave.radius = 0;
+  game.shockwave.pendingWaves = 0;
+  game.shockwave.nextWaveTimer = 0;
   game.shield.active = false;
+  game.shockwave.waveCount = 1;
   game.keys.s = false;
   game.keys.d = false;
   game.running = true;
@@ -269,6 +347,24 @@ function resetGame() {
   game.lastFrameTime = null;
   startScreen.hidden = true;
   requestAnimationFrame(gameLoop);
+}
+
+function jumpToLevel(level) {
+  game.won = false;
+  game.knockedBack = false;
+  game.celebration.active = false;
+  game.celebration.elapsed = 0;
+  game.celebration.particles = [];
+  game.shield.active = false;
+  game.shield.hitsRemaining = 0;
+  game.shockwave.active = false;
+  game.shockwave.radius = 0;
+  game.shockwave.pendingWaves = 0;
+  game.shockwave.nextWaveTimer = 0;
+  game.lasers = [];
+  game.laserShockwaves = [];
+  game.coins = Array.from({ length: game.coinCount }, createCoin);
+  startLevel(level, true);
 }
 
 function drawLandscape() {
@@ -287,7 +383,10 @@ function drawLandscape() {
 
 function getTunnelGapAt(x) {
   const progress = (x - game.tunnel.x) / game.tunnel.width;
-  const centerY = game.tunnel.centerY + Math.sin(progress * Math.PI * 2) * game.tunnel.amplitude;
+  const bend = game.tunnel.winding
+    ? Math.sin(progress * Math.PI * 6) * 0.7 + Math.sin(progress * Math.PI * 3) * 0.3
+    : Math.sin(progress * Math.PI * 2);
+  const centerY = game.tunnel.centerY + bend * game.tunnel.amplitude;
   return {
     top: centerY - game.tunnel.gapHeight / 2,
     bottom: centerY + game.tunnel.gapHeight / 2,
@@ -335,7 +434,7 @@ function updateTunnel(delta) {
       tunnel.active = true;
       tunnel.x = game.width;
       tunnel.centerY = game.height / 2 + (Math.random() - 0.5) * 50;
-      tunnel.speed = game.obstacleSpeed;
+      tunnel.speed = tunnel.winding ? 5.2 : game.obstacleSpeed;
     }
     return;
   }
@@ -343,7 +442,9 @@ function updateTunnel(delta) {
   tunnel.x -= tunnel.speed + delta * 0.002;
   if (tunnel.x + tunnel.width < 0) {
     tunnel.active = false;
-    tunnel.nextIn = 15000 + Math.random() * 10000;
+    tunnel.nextIn = tunnel.winding
+      ? 1000 + Math.random() * 1000
+      : 15000 + Math.random() * 10000;
   }
 }
 
@@ -372,6 +473,11 @@ function drawSpikes() {
 }
 
 function updateSpikes(delta) {
+  if (game.level === game.bonusLevel) {
+    game.spikes = [];
+    return;
+  }
+
   if (game.tunnel.active) {
     game.spikes = [];
     game.spikeTimer = 7000;
@@ -651,6 +757,7 @@ function activateShield() {
 
   game.coinsCollected -= 5;
   game.shield.active = true;
+  game.shield.hitsRemaining = game.shield.maxHits;
   updateCoinMeter();
 }
 
@@ -698,8 +805,10 @@ function drawBoss() {
   }
 
   const boss = game.boss;
-  if (game.player.imageLoaded) {
-    ctx.drawImage(game.player.image, boss.x, boss.y, boss.width, boss.height);
+  const image = boss.isMiniBoss ? game.miniBossImage : game.player.image;
+  const imageLoaded = boss.isMiniBoss ? game.miniBossImageLoaded : game.player.imageLoaded;
+  if (imageLoaded) {
+    ctx.drawImage(image, boss.x, boss.y, boss.width, boss.height);
   } else {
     ctx.fillStyle = '#d84c87';
     ctx.beginPath();
@@ -804,17 +913,23 @@ function drawWin() {
   ctx.textAlign = 'center';
   ctx.fillText('Gewonnen!', game.width / 2, game.height / 2 - 10);
   ctx.font = '24px system-ui, sans-serif';
-  ctx.fillText('Alle 6 Level abgeschlossen!', game.width / 2, game.height / 2 + 34);
+  ctx.fillText(`Alle ${game.maxLevel} Level abgeschlossen!`, game.width / 2, game.height / 2 + 34);
 }
 
 function updateLevel(delta) {
-  if (game.won) {
+  if (game.won || game.celebration.active) {
     return;
   }
 
   if (game.boss.active) {
     if (game.boss.health <= 0) {
       game.boss.active = false;
+      game.coinCapacity += 5;
+      game.coinsCollected = Math.min(game.coinCapacity, game.coinsCollected + 5);
+      updateCoinMeter();
+      if (game.boss.isMiniBoss) {
+        game.shockwave.waveCount += 1;
+      }
       game.enemyShots = [];
       game.celebration.active = true;
       game.celebration.elapsed = 0;
@@ -833,13 +948,11 @@ function updateLevel(delta) {
   if (game.levelElapsed < game.levelDuration) {
     return;
   }
-  if (game.level === game.maxLevel) {
-    game.running = false;
-    drawWin();
-    return;
+  if (game.level === game.bonusLevel) {
+    startLevel(game.maxLevel, true);
+  } else {
+    startBossFight();
   }
-
-  startLevel(game.level + 1, true);
 }
 
 function updatePlayer(timestamp) {
@@ -882,12 +995,19 @@ function updatePlayer(timestamp) {
     game.lastShot = timestamp;
   }
 
-  if (game.keys.d && game.coinsCollected >= 5 && !game.shockwave.active) {
+  if (
+    game.keys.d &&
+    game.coinsCollected >= 5 &&
+    !game.shockwave.active &&
+    game.shockwave.pendingWaves === 0
+  ) {
     game.shockwave.active = true;
-    game.shockwave.radius = 10;
+    game.shockwave.radius = 0;
+    game.shockwave.stoneHit = false;
+    game.shockwave.pendingWaves = game.shockwave.waveCount - 1;
+    game.shockwave.nextWaveTimer = 500;
     game.coinsCollected -= 5;
     updateCoinMeter();
-    game.obstacles = [];
     game.keys.d = false;
   }
 }
@@ -908,8 +1028,11 @@ function resolveShieldCollisions() {
 }
 
 function updateObstacles(delta) {
+  const forwardSpeed = game.keys.arrowright && !game.boss.active
+    ? game.worldSpeed * 2.5
+    : 0;
   game.obstacles.forEach(obs => {
-    obs.x -= obs.speed + delta * 0.002;
+    obs.x -= obs.speed + forwardSpeed + delta * 0.002;
     if (obs.x < -obs.width) {
       Object.assign(obs, createObstacle());
     }
@@ -950,7 +1073,7 @@ function updateBoss(delta) {
     velocityX: Math.cos(angle) * speed,
     velocityY: Math.sin(angle) * speed,
   });
-  game.boss.shotTimer = 500;
+  game.boss.shotTimer = game.boss.shotInterval;
 }
 
 function updateCelebration(delta) {
@@ -991,7 +1114,11 @@ function updateCelebration(delta) {
   if (celebration.elapsed >= 4000) {
     celebration.active = false;
     celebration.particles = [];
-    game.won = true;
+    if (game.level === game.maxLevel) {
+      game.won = true;
+    } else {
+      startLevel(game.level + 1, true);
+    }
   }
 }
 
@@ -1043,8 +1170,9 @@ function drawCelebration() {
   ctx.lineWidth = 5;
   ctx.strokeStyle = 'rgba(16, 15, 36, 0.8)';
   ctx.fillStyle = '#fff2a8';
-  ctx.strokeText('Biblub besiegt!', centerX, 230);
-  ctx.fillText('Biblub besiegt!', centerX, 230);
+  const message = game.level === game.maxLevel ? 'Biblub besiegt!' : 'Gegner besiegt!';
+  ctx.strokeText(message, centerX, 230);
+  ctx.fillText(message, centerX, 230);
   ctx.restore();
 }
 
@@ -1055,7 +1183,10 @@ function updateEnemyShots(delta) {
     shot.y += shot.velocityY * delta / 16.67;
     if (checkCollision(game.player, shot)) {
       if (game.boss.active && game.shield.active) {
-        game.shield.active = false;
+        game.shield.hitsRemaining -= 1;
+        if (game.shield.hitsRemaining === 0) {
+          game.shield.active = false;
+        }
         return;
       }
 
@@ -1145,14 +1276,42 @@ function drawLaserShockwaves() {
 }
 
 function updateShockwave(delta) {
-  if (!game.shockwave.active) {
-    return;
+  const shockwave = game.shockwave;
+  if (shockwave.active) {
+    shockwave.radius += shockwave.speed * delta / 16.67;
+    const playerCenterX = game.player.x + game.player.width / 2;
+    const playerCenterY = game.player.y + game.player.height / 2;
+    game.enemyShots = game.enemyShots.filter(shot => {
+      const distance = Math.hypot(
+        shot.x + shot.width / 2 - playerCenterX,
+        shot.y + shot.height / 2 - playerCenterY
+      );
+      return distance > shockwave.radius;
+    });
+
+    game.obstacles = game.obstacles.filter(obstacle => {
+      const distance = Math.hypot(
+        obstacle.x + obstacle.width / 2 - playerCenterX,
+        obstacle.y + obstacle.height / 2 - playerCenterY
+      );
+      return distance > shockwave.radius + Math.hypot(obstacle.width, obstacle.height) / 2;
+    });
+
+    if (shockwave.radius > shockwave.maxRadius) {
+      shockwave.active = false;
+      shockwave.radius = 0;
+    }
   }
-  game.shockwave.radius += game.shockwave.speed;
-  if (game.shockwave.radius > game.shockwave.maxRadius) {
-    game.shockwave.active = false;
-    game.shockwave.radius = 0;
-    game.obstacles = Array.from({ length: game.obstacleCount }, createObstacle);
+
+  if (shockwave.pendingWaves > 0) {
+    shockwave.nextWaveTimer -= delta;
+    if (shockwave.nextWaveTimer <= 0) {
+      shockwave.pendingWaves -= 1;
+      shockwave.active = true;
+      shockwave.radius = 0;
+      shockwave.stoneHit = false;
+      shockwave.nextWaveTimer = 500;
+    }
   }
 }
 
@@ -1184,7 +1343,7 @@ function updateCoins(delta) {
     }
     if (checkCollision(game.player, coin)) {
       game.coinsCollected += coin.value;
-      game.coinsCollected = Math.min(20, game.coinsCollected);
+      game.coinsCollected = Math.min(game.coinCapacity, game.coinsCollected);
       game.score += coin.value;
       scoreElement.textContent = `Punktzahl: ${Math.floor(game.score)}`;
       updateCoinMeter();
@@ -1219,13 +1378,13 @@ function gameLoop(timestamp) {
     updateSpikes(delta);
   }
   updateBoss(delta);
+  updateShockwave(delta);
   updateEnemyShots(delta);
   if (!game.running) {
     return;
   }
   updateLasers(delta);
   updateLaserShockwaves();
-  updateShockwave(delta);
   updateCoins(delta);
   if (!game.running) {
     return;
@@ -1280,6 +1439,12 @@ function gameLoop(timestamp) {
 
 window.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
+  if (/^[1-7]$/.test(key) && !event.repeat) {
+    if (game.running) {
+      jumpToLevel(Number(key));
+    }
+    event.preventDefault();
+  }
   if (key === 's' && !event.repeat) {
     activateShield();
   }
@@ -1309,6 +1474,13 @@ window.addEventListener('load', () => {
     game.player.imageLoaded = false;
   };
   game.player.image.src = 'biblub.png';
+  game.miniBossImage.onload = () => {
+    game.miniBossImageLoaded = true;
+  };
+  game.miniBossImage.onerror = () => {
+    game.miniBossImageLoaded = false;
+  };
+  game.miniBossImage.src = 'biblub1.png';
   game.shield.image.onload = () => {
     game.shield.imageLoaded = true;
   };

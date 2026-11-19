@@ -110,8 +110,8 @@ const game = {
     shotTimer: 500,
     shotInterval: 500,
   },
-  miniBossImage: new Image(),
-  miniBossImageLoaded: false,
+  bossImage: new Image(),
+  bossImageLoaded: false,
   celebration: {
     active: false,
     elapsed: 0,
@@ -805,8 +805,8 @@ function drawBoss() {
   }
 
   const boss = game.boss;
-  const image = boss.isMiniBoss ? game.miniBossImage : game.player.image;
-  const imageLoaded = boss.isMiniBoss ? game.miniBossImageLoaded : game.player.imageLoaded;
+  const image = game.bossImage;
+  const imageLoaded = game.bossImageLoaded;
   if (imageLoaded) {
     ctx.drawImage(image, boss.x, boss.y, boss.width, boss.height);
   } else {
@@ -1474,13 +1474,13 @@ window.addEventListener('load', () => {
     game.player.imageLoaded = false;
   };
   game.player.image.src = 'biblub.png';
-  game.miniBossImage.onload = () => {
-    game.miniBossImageLoaded = true;
+  game.bossImage.onload = () => {
+    game.bossImageLoaded = true;
   };
-  game.miniBossImage.onerror = () => {
-    game.miniBossImageLoaded = false;
+  game.bossImage.onerror = () => {
+    game.bossImageLoaded = false;
   };
-  game.miniBossImage.src = 'biblub1.png';
+  game.bossImage.src = 'biblub1.png';
   game.shield.image.onload = () => {
     game.shield.imageLoaded = true;
   };

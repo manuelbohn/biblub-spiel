@@ -365,6 +365,9 @@ function jumpToLevel(level) {
   game.laserShockwaves = [];
   game.coins = Array.from({ length: game.coinCount }, createCoin);
   startLevel(level, true);
+  if (level < game.maxLevel) {
+    startBossFight();
+  }
 }
 
 function drawLandscape() {

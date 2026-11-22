@@ -88,6 +88,20 @@ const game = {
   },
   spikes: [],
   spikeTimer: 6000,
+  volcano: {
+    phase: 'hidden',
+    timer: 0,
+    elapsed: 0,
+    projectileTimer: 0,
+    x: 0,
+    width: 170,
+    height: 0,
+    projectiles: [],
+  },
+  avalanche: {
+    timer: 0,
+    rocks: [],
+  },
   knockedBack: false,
   coins: [],
   coinCount: 4,
@@ -164,10 +178,24 @@ function createObstacle() {
     width,
     height,
     color: isBig ? '#5a5a5a' : '#7a7a7a',
-    health: isBig ? 5 : 2,
+    health: Math.ceil((isBig ? 5 : 2) * 1.25),
     speed: game.obstacleSpeed + (isBig ? Math.random() * 1.0 : Math.random() * 1.5) * game.levelSpeedMultiplier,
     isBig,
   };
+}
+
+function resetVolcano(enabled) {
+  game.volcano.phase = enabled ? 'waiting' : 'hidden';
+  game.volcano.timer = enabled ? 10000 + Math.random() * 5000 : Infinity;
+  game.volcano.elapsed = 0;
+  game.volcano.projectileTimer = 0;
+  game.volcano.height = 0;
+  game.volcano.projectiles = [];
+}
+
+function resetAvalanche(enabled) {
+  game.avalanche.timer = enabled ? 8000 + Math.random() * 5000 : Infinity;
+  game.avalanche.rocks = [];
 }
 
 function createCoin() {
@@ -232,17 +260,17 @@ function startLevel(level, announce = false) {
   const caveLevel = Math.min(level, worldThemes.length);
   game.worldTheme = isBossLevel ? bossTheme : worldThemes[caveLevel - 1];
   game.levelElapsed = 0;
-  game.levelSpeedMultiplier = caveLevel === 1 ? 0.5 : 1 + (caveLevel - 1) * 0.05;
+  game.levelSpeedMultiplier = 0.7 + (level - 1) * 0.125;
   game.obstacleSpeed = 4 * game.levelSpeedMultiplier;
-  game.levelDuration = isBossLevel ? Infinity : isBonusLevel ? 16000 : 30000;
-  game.obstacleCount = isBossLevel || isBonusLevel ? 0 : 3 + caveLevel - 1;
+  game.levelDuration = isBossLevel ? Infinity : isBonusLevel ? 25000 : 40000 + (caveLevel - 1) * 5000;
+  game.obstacleCount = isBonusLevel || isBossLevel ? 0 : 3 + caveLevel - 1;
   game.obstacles = Array.from({ length: game.obstacleCount }, createObstacle);
   game.boss.active = isBossLevel;
   game.boss.isMiniBoss = false;
-  game.boss.health = isBossLevel ? 30 : level * 5;
+  game.boss.health = Math.ceil((isBossLevel ? 30 : level * 5) * 1.5);
   game.boss.maxHealth = game.boss.health;
-  game.boss.width = 96;
   game.boss.height = 96;
+  game.boss.width = game.boss.height * (237 / 204);
   game.boss.x = game.width - 170;
   game.boss.y = game.height / 2 - game.boss.height / 2;
   game.boss.verticalDirection = 1;
@@ -253,14 +281,16 @@ function startLevel(level, announce = false) {
   game.tunnel.x = 0;
   game.tunnel.winding = isBonusLevel;
   game.tunnel.width = isBonusLevel ? 1250 : 1500 + (caveLevel - 1) * 180;
-  game.tunnel.gapHeight = isBonusLevel ? 220 : 340 - (caveLevel - 1) * 24;
+  game.tunnel.gapHeight = isBonusLevel ? 220 : 340;
   game.tunnel.amplitude = isBonusLevel ? 100 : 65;
   game.tunnel.speed = isBonusLevel ? 5.2 : game.obstacleSpeed;
   game.tunnel.nextIn = isBonusLevel
     ? 1000 + Math.random() * 500
     : 6000 + Math.random() * 3000;
   game.spikes = [];
-  game.spikeTimer = 5000 + Math.random() * 3000;
+  game.spikeTimer = (7000 - (caveLevel - 1) * 700) + Math.random() * 1000;
+  resetVolcano(level === 4 && !isBossLevel);
+  resetAvalanche(level < game.bonusLevel && !isBossLevel);
   if (isBossLevel || isBonusLevel) {
     game.worldOffset = 0;
     game.knockedBack = false;
@@ -284,14 +314,14 @@ function startLevel(level, announce = false) {
 function startBossFight() {
   game.boss.active = true;
   game.boss.isMiniBoss = true;
-  game.boss.health = game.level * 5;
+  game.boss.health = Math.ceil(game.level * 5 * 1.5);
   game.boss.maxHealth = game.boss.health;
   if (game.level < game.bonusLevel) {
     game.boss.height = 100;
-    game.boss.width = game.boss.height * (204 / 326);
+    game.boss.width = game.boss.height * (237 / 204);
   } else {
-    game.boss.width = 96;
     game.boss.height = 96;
+    game.boss.width = game.boss.height * (237 / 204);
   }
   game.boss.x = game.width - game.boss.width - 74;
   game.boss.y = game.height / 2 - game.boss.height / 2;
@@ -299,8 +329,10 @@ function startBossFight() {
   const shotsPerSecond = game.level;
   game.boss.shotInterval = 1000 / shotsPerSecond;
   game.boss.shotTimer = game.boss.shotInterval;
-  game.obstacles = [];
   game.obstacleCount = 0;
+  game.obstacles = [];
+  resetVolcano(false);
+  resetAvalanche(false);
   game.tunnel.active = false;
   game.spikes = [];
   game.worldOffset = 0;
@@ -498,7 +530,8 @@ function updateSpikes(delta) {
       topHeight,
       bottomHeight: 65 + Math.random() * Math.max(0, maxBottomHeight - 65),
     });
-    game.spikeTimer = 7000 + Math.random() * 5000;
+    const caveLevel = Math.min(game.level, worldThemes.length);
+    game.spikeTimer = (9000 - (caveLevel - 1) * 1000) + Math.random() * 1000;
   }
 
   game.spikes.forEach(spike => {
@@ -764,41 +797,107 @@ function activateShield() {
   updateCoinMeter();
 }
 
+function drawRock(rock) {
+  const gradient = ctx.createLinearGradient(
+    rock.x,
+    rock.y,
+    rock.x + rock.width,
+    rock.y + rock.height
+  );
+  gradient.addColorStop(0, '#b0b0b0');
+  gradient.addColorStop(0.5, '#7a7a7a');
+  gradient.addColorStop(1, '#4d4d4d');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(rock.x + rock.width * 0.1, rock.y + rock.height * 0.15);
+  ctx.lineTo(rock.x + rock.width * 0.6, rock.y + rock.height * 0.05);
+  ctx.lineTo(rock.x + rock.width * 0.95, rock.y + rock.height * 0.3);
+  ctx.lineTo(rock.x + rock.width * 0.85, rock.y + rock.height * 0.7);
+  ctx.lineTo(rock.x + rock.width * 0.5, rock.y + rock.height * 0.95);
+  ctx.lineTo(rock.x + rock.width * 0.2, rock.y + rock.height * 0.8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(170,170,170,0.9)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(220,220,220,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(rock.x + rock.width * 0.3, rock.y + rock.height * 0.25);
+  ctx.lineTo(rock.x + rock.width * 0.35, rock.y + rock.height * 0.45);
+  ctx.lineTo(rock.x + rock.width * 0.28, rock.y + rock.height * 0.55);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(rock.x + rock.width * 0.65, rock.y + rock.height * 0.35);
+  ctx.lineTo(rock.x + rock.width * 0.75, rock.y + rock.height * 0.5);
+  ctx.lineTo(rock.x + rock.width * 0.72, rock.y + rock.height * 0.7);
+  ctx.stroke();
+}
+
 function drawObstacles() {
-  game.obstacles.forEach(obs => {
-    const gradient = ctx.createLinearGradient(obs.x, obs.y, obs.x + obs.width, obs.y + obs.height);
-    gradient.addColorStop(0, '#b0b0b0');
-    gradient.addColorStop(0.5, '#7a7a7a');
-    gradient.addColorStop(1, '#4d4d4d');
+  game.obstacles.forEach(drawRock);
+  game.avalanche.rocks.forEach(drawRock);
+}
+
+function drawVolcano() {
+  const volcano = game.volcano;
+  if (volcano.height > 0) {
+    const topY = game.height - volcano.height;
+    const gradient = ctx.createLinearGradient(0, topY, 0, game.height);
+    gradient.addColorStop(0, '#5e2520');
+    gradient.addColorStop(1, '#17151b');
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.moveTo(obs.x + obs.width * 0.1, obs.y + obs.height * 0.15);
-    ctx.lineTo(obs.x + obs.width * 0.6, obs.y + obs.height * 0.05);
-    ctx.lineTo(obs.x + obs.width * 0.95, obs.y + obs.height * 0.3);
-    ctx.lineTo(obs.x + obs.width * 0.85, obs.y + obs.height * 0.7);
-    ctx.lineTo(obs.x + obs.width * 0.5, obs.y + obs.height * 0.95);
-    ctx.lineTo(obs.x + obs.width * 0.2, obs.y + obs.height * 0.8);
+    ctx.moveTo(volcano.x, game.height);
+    ctx.lineTo(volcano.x + volcano.width * 0.35, topY + volcano.height * 0.12);
+    ctx.lineTo(volcano.x + volcano.width * 0.65, topY + volcano.height * 0.12);
+    ctx.lineTo(volcano.x + volcano.width, game.height);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(170,170,170,0.9)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Add small cracks for realistic rock detail
-    ctx.strokeStyle = 'rgba(220,220,220,0.5)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = volcano.phase === 'erupting' ? '#ff5722' : '#9b3824';
     ctx.beginPath();
-    ctx.moveTo(obs.x + obs.width * 0.3, obs.y + obs.height * 0.25);
-    ctx.lineTo(obs.x + obs.width * 0.35, obs.y + obs.height * 0.45);
-    ctx.lineTo(obs.x + obs.width * 0.28, obs.y + obs.height * 0.55);
-    ctx.stroke();
+    ctx.ellipse(
+      volcano.x + volcano.width / 2,
+      topY + volcano.height * 0.12,
+      volcano.width * 0.17,
+      Math.max(5, volcano.height * 0.035),
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
 
+  volcano.projectiles.forEach(projectile => {
+    ctx.save();
+    ctx.shadowColor = projectile.type === 'lava' ? '#ff4d00' : '#ffae42';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = projectile.type === 'lava' ? '#ff5a00' : '#453b38';
     ctx.beginPath();
-    ctx.moveTo(obs.x + obs.width * 0.65, obs.y + obs.height * 0.35);
-    ctx.lineTo(obs.x + obs.width * 0.75, obs.y + obs.height * 0.5);
-    ctx.lineTo(obs.x + obs.width * 0.72, obs.y + obs.height * 0.7);
-    ctx.stroke();
+    if (projectile.type === 'lava') {
+      ctx.ellipse(
+        projectile.x + projectile.width / 2,
+        projectile.y + projectile.height / 2,
+        projectile.width / 2,
+        projectile.height / 2,
+        0,
+        0,
+        Math.PI * 2
+      );
+    } else {
+      ctx.moveTo(projectile.x + projectile.width * 0.5, projectile.y);
+      ctx.lineTo(projectile.x + projectile.width, projectile.y + projectile.height * 0.4);
+      ctx.lineTo(projectile.x + projectile.width * 0.7, projectile.y + projectile.height);
+      ctx.lineTo(projectile.x + projectile.width * 0.15, projectile.y + projectile.height * 0.8);
+      ctx.lineTo(projectile.x, projectile.y + projectile.height * 0.3);
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.restore();
   });
 }
 
@@ -960,20 +1059,21 @@ function updateLevel(delta) {
 
 function updatePlayer(timestamp) {
   const p = game.player;
+  const horizontalPlayerMovement = game.boss.active || game.level < game.bonusLevel;
   if (game.knockedBack) {
     p.x -= 8;
     return;
   }
 
   if (game.keys.arrowleft) {
-    if (game.boss.active) {
+    if (horizontalPlayerMovement) {
       p.x = Math.max(20, p.x - p.speed);
     } else {
       game.worldOffset = Math.max(0, game.worldOffset - game.worldSpeed);
     }
   }
   if (game.keys.arrowright) {
-    if (game.boss.active) {
+    if (horizontalPlayerMovement) {
       p.x = Math.min(game.width - p.width - 20, p.x + p.speed);
     } else {
       game.worldOffset += game.worldSpeed * 2.5;
@@ -1027,11 +1127,29 @@ function resolveShieldCollisions() {
   if (hitIndex !== -1) {
     game.obstacles.splice(hitIndex, 1);
     game.shield.active = false;
+    return;
+  }
+
+  const fallingRockIndex = game.avalanche.rocks.findIndex(rock =>
+    checkCollision(shieldBounds, rock) || checkCollision(game.player, rock)
+  );
+  if (fallingRockIndex !== -1) {
+    game.avalanche.rocks.splice(fallingRockIndex, 1);
+    game.shield.active = false;
+    return;
+  }
+
+  const projectileIndex = game.volcano.projectiles.findIndex(projectile =>
+    checkCollision(shieldBounds, projectile) || checkCollision(game.player, projectile)
+  );
+  if (projectileIndex !== -1) {
+    game.volcano.projectiles.splice(projectileIndex, 1);
+    game.shield.active = false;
   }
 }
 
 function updateObstacles(delta) {
-  const forwardSpeed = game.keys.arrowright && !game.boss.active
+  const forwardSpeed = game.keys.arrowright && !game.boss.active && game.level >= game.bonusLevel
     ? game.worldSpeed * 2.5
     : 0;
   game.obstacles.forEach(obs => {
@@ -1040,6 +1158,116 @@ function updateObstacles(delta) {
       Object.assign(obs, createObstacle());
     }
   });
+  if (!game.boss.active && game.obstacles.length < game.obstacleCount) {
+    game.obstacles.push(createObstacle());
+  }
+}
+
+function spawnAvalanche() {
+  const count = 3 + game.level;
+  const availableWidth = game.width;
+
+  for (let index = 0; index < count; index += 1) {
+    const rock = createObstacle();
+    rock.x = ((index + Math.random()) / count) * Math.max(0, availableWidth - rock.width);
+    rock.y = -rock.height - Math.random() * game.height * 0.3;
+    rock.speed = (4 + Math.random() * 2) * game.levelSpeedMultiplier;
+    game.avalanche.rocks.push(rock);
+  }
+}
+
+function updateAvalanche(delta) {
+  const avalanche = game.avalanche;
+  avalanche.timer -= delta;
+  if (avalanche.timer <= 0) {
+    spawnAvalanche();
+    avalanche.timer = 18000 + Math.random() * 10000;
+  }
+
+  avalanche.rocks.forEach(rock => {
+    rock.y += rock.speed * delta / 16.67 + delta * 0.002;
+  });
+  avalanche.rocks = avalanche.rocks.filter(rock => rock.y < game.height);
+}
+
+function spawnVolcanoBurst() {
+  const volcano = game.volcano;
+  const originX = volcano.x + volcano.width / 2;
+  const originY = game.height - volcano.height;
+  const gravity = 0.22;
+
+  ['rock', 'lava'].forEach(type => {
+    const size = type === 'rock' ? 24 : 20;
+    const projectileY = originY - size / 2;
+    const verticalReach = projectileY - game.height / 3;
+    volcano.projectiles.push({
+      type,
+      x: originX - size / 2 + (Math.random() - 0.5) * 28,
+      y: projectileY,
+      width: size,
+      height: size,
+      velocityX: (Math.random() - 0.5) * 5,
+      velocityY: -Math.sqrt(2 * gravity * verticalReach),
+      gravity,
+    });
+  });
+}
+
+function updateVolcano(delta) {
+  const volcano = game.volcano;
+  const frameScale = delta / 16.67;
+  volcano.projectiles.forEach(projectile => {
+    projectile.x += projectile.velocityX * frameScale;
+    projectile.y += projectile.velocityY * frameScale +
+      0.5 * projectile.gravity * frameScale * frameScale;
+    projectile.velocityY += projectile.gravity * frameScale;
+  });
+  volcano.projectiles = volcano.projectiles.filter(projectile =>
+    projectile.x + projectile.width > 0 &&
+    projectile.x < game.width &&
+    projectile.y < game.height
+  );
+
+  switch (volcano.phase) {
+    case 'waiting':
+      volcano.timer -= delta;
+      if (volcano.timer <= 0) {
+        volcano.x = 50 + Math.random() * (game.width - volcano.width - 100);
+        volcano.phase = 'rising';
+        volcano.elapsed = 0;
+      }
+      break;
+    case 'rising':
+      volcano.elapsed += delta;
+      volcano.height = game.height * 0.25 * Math.min(volcano.elapsed / 1400, 1);
+      if (volcano.elapsed >= 1400) {
+        volcano.phase = 'erupting';
+        volcano.elapsed = 0;
+        volcano.projectileTimer = 0;
+      }
+      break;
+    case 'erupting':
+      volcano.elapsed += delta;
+      volcano.projectileTimer -= delta;
+      if (volcano.projectileTimer <= 0) {
+        spawnVolcanoBurst();
+        volcano.projectileTimer = 650;
+      }
+      if (volcano.elapsed >= 3600) {
+        volcano.phase = 'retreating';
+        volcano.elapsed = 0;
+      }
+      break;
+    case 'retreating':
+      volcano.elapsed += delta;
+      volcano.height = game.height * 0.25 * (1 - Math.min(volcano.elapsed / 1200, 1));
+      if (volcano.elapsed >= 1200) {
+        volcano.phase = 'waiting';
+        volcano.timer = 18000 + Math.random() * 10000;
+        volcano.height = 0;
+      }
+      break;
+  }
 }
 
 function updateBoss(delta) {
@@ -1223,9 +1451,15 @@ function updateLasers(delta) {
   game.lasers = game.lasers.filter(laser => laser.x < game.width + laser.width);
 
   game.lasers = game.lasers.filter(laser => {
-    const hitIndex = game.obstacles.findIndex(obs => checkCollision(laser, obs));
+    let obstaclePool = game.obstacles;
+    let hitIndex = obstaclePool.findIndex(obs => checkCollision(laser, obs));
+    if (hitIndex === -1) {
+      obstaclePool = game.avalanche.rocks;
+      hitIndex = obstaclePool.findIndex(rock => checkCollision(laser, rock));
+    }
+
     if (hitIndex !== -1) {
-      const obstacle = game.obstacles[hitIndex];
+      const obstacle = obstaclePool[hitIndex];
       obstacle.health -= 1;
       if (obstacle.health <= 0) {
         game.laserShockwaves.push({
@@ -1235,7 +1469,11 @@ function updateLasers(delta) {
           maxRadius: Math.max(obstacle.width, obstacle.height) * 0.75,
           speed: 10,
         });
-        Object.assign(obstacle, createObstacle());
+        if (obstaclePool === game.obstacles) {
+          Object.assign(obstacle, createObstacle());
+        } else {
+          obstaclePool.splice(hitIndex, 1);
+        }
       }
       return false;
     }
@@ -1258,6 +1496,12 @@ function updateLaserShockwaves() {
       if (Math.hypot(dx, dy) <= wave.radius + obstacleRadius) {
         Object.assign(obstacle, createObstacle());
       }
+    });
+    game.avalanche.rocks = game.avalanche.rocks.filter(rock => {
+      const dx = rock.x + rock.width / 2 - wave.x;
+      const dy = rock.y + rock.height / 2 - wave.y;
+      const rockRadius = Math.hypot(rock.width, rock.height) / 2;
+      return Math.hypot(dx, dy) > wave.radius + rockRadius;
     });
   });
   game.laserShockwaves = game.laserShockwaves.filter(wave => wave.radius < wave.maxRadius);
@@ -1298,6 +1542,13 @@ function updateShockwave(delta) {
         obstacle.y + obstacle.height / 2 - playerCenterY
       );
       return distance > shockwave.radius + Math.hypot(obstacle.width, obstacle.height) / 2;
+    });
+    game.avalanche.rocks = game.avalanche.rocks.filter(rock => {
+      const distance = Math.hypot(
+        rock.x + rock.width / 2 - playerCenterX,
+        rock.y + rock.height / 2 - playerCenterY
+      );
+      return distance > shockwave.radius + Math.hypot(rock.width, rock.height) / 2;
     });
 
     if (shockwave.radius > shockwave.maxRadius) {
@@ -1376,6 +1627,12 @@ function gameLoop(timestamp) {
   drawLandscape();
   updatePlayer(timestamp);
   updateObstacles(delta);
+  if (game.level < game.bonusLevel && !game.boss.active) {
+    updateAvalanche(delta);
+  }
+  if (game.level === 4 && !game.boss.active) {
+    updateVolcano(delta);
+  }
   if (!game.boss.active) {
     updateTunnel(delta);
     updateSpikes(delta);
@@ -1404,6 +1661,7 @@ function gameLoop(timestamp) {
   drawTunnels();
   drawSpikes();
   drawObstacles();
+  drawVolcano();
   drawBoss();
   drawEnemyShots();
   drawLasers();
@@ -1428,6 +1686,8 @@ function gameLoop(timestamp) {
 
   if (!game.knockedBack && (
     game.obstacles.some(obs => checkCollision(game.player, obs)) ||
+    game.avalanche.rocks.some(rock => checkCollision(game.player, rock)) ||
+    game.volcano.projectiles.some(projectile => checkCollision(game.player, projectile)) ||
     game.spikes.some(spike => checkSpikeCollision(game.player, spike))
   )) {
     game.running = false;
@@ -1483,7 +1743,7 @@ window.addEventListener('load', () => {
   game.bossImage.onerror = () => {
     game.bossImageLoaded = false;
   };
-  game.bossImage.src = 'biblub1.png';
+  game.bossImage.src = 'biblub-boss.png';
   game.shield.image.onload = () => {
     game.shield.imageLoaded = true;
   };

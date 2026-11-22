@@ -6,6 +6,12 @@ const levelElement = document.getElementById('level');
 const restartButton = document.getElementById('restartButton');
 const startButton = document.getElementById('startButton');
 const startScreen = document.getElementById('startScreen');
+const introScreen = document.getElementById('introScreen');
+const introZoomImage = document.getElementById('introZoomImage');
+const introBossImage = document.getElementById('introBossImage');
+const introBossGlow = document.getElementById('introBossGlow');
+const introTitle = document.getElementById('introTitle');
+const introStartButton = document.getElementById('introStartButton');
 const levelAnnouncement = document.getElementById('levelAnnouncement');
 
 const worldThemes = [
@@ -1725,8 +1731,44 @@ window.addEventListener('keyup', event => {
   }
 });
 
-startButton.addEventListener('click', resetGame);
+function revealIntroTitle() {
+  introScreen.classList.add('intro-screen--title');
+  introTitle.hidden = false;
+}
+
+function startIntroBossAttack() {
+  introBossImage.addEventListener('animationend', event => {
+    if (event.animationName === 'intro-boss-entry') {
+      revealIntroTitle();
+    }
+  }, { once: true });
+  introBossGlow.hidden = false;
+  introBossImage.hidden = false;
+  introScreen.classList.add('intro-screen--boss-attack');
+}
+
+function startGame() {
+  introScreen.hidden = true;
+  resetGame();
+}
+
+startButton.addEventListener('click', startGame);
+introStartButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', resetGame);
+
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  introZoomImage.hidden = true;
+  introBossGlow.hidden = false;
+  introBossImage.hidden = false;
+  introScreen.classList.add('intro-screen--boss-attack');
+  revealIntroTitle();
+} else {
+  introZoomImage.addEventListener('animationend', event => {
+    if (event.animationName === 'intro-mascot') {
+      startIntroBossAttack();
+    }
+  }, { once: true });
+}
 
 window.addEventListener('load', () => {
   initCoinMeter();

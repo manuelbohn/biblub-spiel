@@ -14,6 +14,185 @@ body {
   padding: 20px;
 }
 
+.intro-screen {
+  --intro-logo-width: clamp(110px, 28vh, 300px);
+  --intro-logo-half-height: clamp(92px, 23.48vh, 251.5px);
+  --intro-boss-width: clamp(160px, 35vh, 360px);
+  --intro-boss-circle-size: clamp(180px, 48vh, 480px);
+  --intro-boss-circle-half-size: clamp(90px, 24vh, 240px);
+  --intro-actor-half-height: var(--intro-logo-half-height);
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #0f0f23;
+}
+
+.intro-screen[hidden],
+.intro-title[hidden] {
+  display: none;
+}
+
+.intro-zoom-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  max-width: none;
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: intro-mascot 4000ms ease-in-out forwards;
+}
+
+.intro-boss-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--intro-boss-width);
+  max-width: none;
+  transform: translate(calc(50vw + 50%), -50%);
+}
+
+.intro-boss-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--intro-boss-circle-size);
+  aspect-ratio: 1;
+  border: 3px solid rgba(255, 218, 91, 0.9);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 206, 61, 0.22), rgba(255, 188, 31, 0.08) 58%, transparent 72%);
+  box-shadow: 0 0 24px 8px rgba(255, 196, 0, 0.7), inset 0 0 24px rgba(255, 196, 0, 0.45);
+  transform: translate(calc(50vw + 50%), -50%);
+}
+
+.intro-screen--boss-attack {
+  --intro-actor-half-height: var(--intro-boss-circle-half-size);
+}
+
+.intro-screen--boss-attack .intro-boss-glow {
+  animation:
+    intro-boss-entry 1400ms ease-in-out forwards,
+    intro-golden-glow 900ms ease-in-out 1400ms infinite alternate;
+}
+
+.intro-screen--boss-attack .intro-boss-image {
+  animation: intro-boss-entry 1400ms ease-in-out forwards;
+}
+
+.intro-screen--boss-attack .intro-zoom-image {
+  width: var(--intro-logo-width);
+  animation: intro-biblub-kicked 600ms ease-out 800ms forwards;
+}
+
+.intro-title {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  color: #fff;
+  text-align: center;
+  animation: intro-title-appear 600ms ease-out both;
+}
+
+.intro-title h1 {
+  position: absolute;
+  bottom: calc(50% + var(--intro-actor-half-height) + 18px);
+  left: 50%;
+  margin: 0;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  transform: translateX(-50%);
+}
+
+.intro-title button {
+  position: absolute;
+  top: calc(50% + var(--intro-actor-half-height) + 18px);
+  left: 50%;
+  min-width: 150px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.intro-title button:hover {
+  transform: translate(-50%, -1px);
+}
+
+@keyframes intro-mascot {
+  from {
+    width: 64px;
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    width: var(--intro-logo-width);
+    transform: translate(-50%, -50%) rotate(1440deg);
+  }
+}
+
+@keyframes intro-boss-entry {
+  to {
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes intro-golden-glow {
+  from {
+    box-shadow: 0 0 20px 5px rgba(255, 196, 0, 0.55), inset 0 0 18px rgba(255, 196, 0, 0.35);
+  }
+  to {
+    box-shadow: 0 0 38px 13px rgba(255, 196, 0, 0.9), inset 0 0 30px rgba(255, 196, 0, 0.6);
+  }
+}
+
+@keyframes intro-biblub-kicked {
+  0% {
+    transform: translate(-50%, -50%) rotate(1440deg);
+    opacity: 1;
+  }
+  20% {
+    transform: translate(calc(-50% - 28px), -50%) rotate(1450deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% - 140vw), -50%) rotate(1530deg);
+    opacity: 0;
+  }
+}
+
+@keyframes intro-title-appear {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-zoom-image,
+  .intro-boss-image,
+  .intro-boss-glow,
+  .intro-title {
+    animation: none;
+  }
+
+  .intro-zoom-image {
+    width: var(--intro-logo-width);
+  }
+
+  .intro-screen--boss-attack .intro-boss-image {
+    transform: translate(-50%, -50%);
+  }
+
+  .intro-screen--boss-attack .intro-boss-glow {
+    transform: translate(-50%, -50%);
+  }
+}
+
 .game-layout {
   display: flex;
   align-items: center;
